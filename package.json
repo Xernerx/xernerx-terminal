@@ -17,7 +17,7 @@
 	"keywords": [],
 	"author": "Xernerx Studios",
 	"license": "MIT",
-	"packageManager": "npm@11.11.0",
+	"packageManager": "npm@10.9.7",
 	"devDependencies": {
 		"@arethetypeswrong/cli": "^0.18.2",
 		"@types/chalk-animation": "^1.6.3",
@@ -30,5 +30,8 @@
 		"boxen": "^8.0.1",
 		"chalk": "^5.6.2",
 		"ora": "^9.4.0"
+	},
+	"engines": {
+		"node": ">=22"
 	}
 }
