@@ -19,6 +19,9 @@
 	"license": "MIT",
 	"packageManager": "npm@11.11.0",
 	"devDependencies": {
+		"typedoc-github-theme": "^0.4.0",
+		"typedoc-plugin-extras": "^4.0.1",
+		"typedoc-plugin-zod": "^1.4.3",
 		"@arethetypeswrong/cli": "^0.18.2",
 		"@types/chalk-animation": "^1.6.3",
 		"@types/node": "^24",
