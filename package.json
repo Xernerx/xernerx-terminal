@@ -1,7 +1,7 @@
 {
 	"name": "@xernerx/terminal",
 	"version": "1.0.6",
-	"description": "",
+	"description": "A cli log tool for xernerx projects",
 	"main": "dist/main.js",
 	"scripts": {
 		"beta": "npm version prerelease --preid=beta",
