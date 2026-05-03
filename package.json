@@ -1,6 +1,6 @@
 {
 	"name": "@xernerx/terminal",
-	"version": "1.0.1-beta.0",
+	"version": "1.0.1",
 	"description": "",
 	"main": "dist/main.js",
 	"scripts": {
