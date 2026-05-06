@@ -3,6 +3,7 @@
 	"version": "1.0.8",
 	"description": "A cli log tool for xernerx projects",
 	"main": "dist/main.js",
+	"type": "module",
 	"scripts": {
 		"beta": "npm version prerelease --preid=beta",
 		"patch": "npm version patch",
