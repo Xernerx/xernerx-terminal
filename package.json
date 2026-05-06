@@ -3,10 +3,27 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"version": "1.0.12",
-	"description": "A cli log tool for xernerx projects",
-	"main": "dist/main.js",
+	"version": "1.0.11",
 	"type": "module",
+	"description": "A cli log tool for xernerx projects",
+	"main": "./dist/main.cjs",
+	"module": "./dist/main.js",
+	"types": "./dist/main.d.ts",
+	"homepage": "www.xernerx.com",
+	"files": [
+		"src",
+		"dist"
+	],
+	"exports": {
+		"require": {
+			"types": "./dist/main.d.cts",
+			"default": "./dist/main.cjs"
+		},
+		"import": {
+			"types": "./dist/main.d.ts",
+			"default": "./dist/main.js"
+		}
+	},
 	"scripts": {
 		"beta": "npm version prerelease --preid=beta",
 		"patch": "npm version patch",
