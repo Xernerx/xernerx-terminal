@@ -1,5 +1,8 @@
 {
 	"name": "@xernerx/terminal",
+	"publishConfig": {
+		"access": "public"
+	},
 	"version": "1.0.11",
 	"description": "A cli log tool for xernerx projects",
 	"main": "dist/main.js",
