@@ -40,6 +40,9 @@ importers:
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(supports-color@7.2.0)(typescript@6.0.3)(yaml@2.9.0)
+      typedoc:
+        specifier: ^0.28.20
+        version: 0.28.20(typescript@6.0.3)
       typedoc-github-theme:
         specifier: ^0.4.0
         version: 0.4.0(typedoc@0.28.20(typescript@6.0.3))
