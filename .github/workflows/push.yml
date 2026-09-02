@@ -32,7 +32,7 @@ jobs:
         run: pnpm exec tsup
 
       - name: Check exports with arethetypeswrong
-        run: pnpm exec @arethetypeswrong/cli --pack
+        run: pnpm exec attw --pack
 
       - name: Run Prettier
         run: pnpm exec prettier --write .
