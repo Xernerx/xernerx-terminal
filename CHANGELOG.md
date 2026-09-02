@@ -1,5 +1,13 @@
 <!-- @format -->
 
+## 1.1.1
+
+### Patch Changes
+
+- <!-- @format -->
+
+  Patch
+
 # @xernerx/terminal
 
 ## 1.1.0
