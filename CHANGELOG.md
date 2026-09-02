@@ -1,5 +1,13 @@
 <!-- @format -->
 
+## 1.1.5
+
+### Patch Changes
+
+- <!-- @format -->
+
+  Fixing release once more
+
 ## 1.1.4
 
 ### Patch Changes
