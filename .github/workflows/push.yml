@@ -19,6 +19,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
@@ -64,29 +65,23 @@ jobs:
           # JSON (for your API)
           pnpm exec typedoc --json typedoc_out/docs.json src
 
-      - name: Configure npm authentication
-        run: pnpm config set "//registry.npmjs.org/:_authToken" "${NODE_AUTH_TOKEN}"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
-
       - name: Publish to npmjs.org
         run: |
           if [ "${GITHUB_REF##*/}" = "beta" ]; then
-            pnpm publish --tag beta --access public --no-git-checks --no-provenance
+            npm publish --tag beta --access public
           else
-            pnpm publish --tag latest --access public --no-git-checks --no-provenance
+            npm publish --tag latest --access public
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
 
       - name: Configure npm for GitHub Packages
         run: |
-          pnpm config set "@xernerx:registry" "https://npm.pkg.github.com/"
-          pnpm config set "//npm.pkg.github.com/:_authToken" "${XERNERX_ACCESS_TOKEN}"
+          echo "@xernerx:registry=https://npm.pkg.github.com///npm.pkg.github.com/:_authToken=${XERNERX_ACCESS_TOKEN}" > ~/.npmrc
 
       - name: Publish to GitHub Packages
         if: false # disabled until scoped package is ready
-        run: pnpm publish --registry=https://npm.pkg.github.com/ --access public --no-git-checks
+        run: npm publish --registry=https://npm.pkg.github.com/ --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN }}
 

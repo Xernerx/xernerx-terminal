@@ -1,5 +1,13 @@
 <!-- @format -->
 
+## 1.1.10
+
+### Patch Changes
+
+- <!-- @format -->
+
+  frick
+
 ## 1.1.9
 
 ### Patch Changes
