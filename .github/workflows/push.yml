@@ -25,12 +25,17 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 11.24.0
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Run tests
         id: test
-        run: npm test && npx tsup
+        run: pnpm test && pnpm exec tsup
         continue-on-error: true
 
       - name: Set lowest passing Node version
@@ -50,29 +55,33 @@ jobs:
         with:
           node-version: ${{ needs.detect-and-build.outputs.lowest-node }}
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 11.24.0
+
       - name: Install dependencies
-        run: npm install
+        run: pnpm install
 
       - name: Build with tsup
-        run: npx tsup
+        run: pnpm exec tsup
 
       - name: Check exports with arethetypeswrong
-        run: npx @arethetypeswrong/cli --pack
+        run: pnpm exec @arethetypeswrong/cli --pack
 
       - name: Run Prettier
-        run: npx prettier --write .
+        run: pnpm exec prettier --write .
 
-      - name: Update package.json engines and packageManager
+      - name: Update package.json engines
         run: |
           npm pkg set "engines.node=>=${{ needs.detect-and-build.outputs.lowest-node }}"
-          npm pkg set "packageManager=npm@$(npm -v)"
 
       - name: Commit updated package.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json
-          git commit -m "chore: update engines.node and packageManager" || echo "No changes"
+          git commit -m "chore: update engines.node" || echo "No changes"
           git push origin main || echo "Push failed, likely no changes"
 
       - name: Get package info
@@ -97,10 +106,10 @@ jobs:
           mkdir -p typedoc_out
 
           # HTML (for browsing)
-          npx typedoc --out typedoc_out src
+          pnpm exec typedoc --out typedoc_out src
 
           # JSON (for your API)
-          npx typedoc --json typedoc_out/docs.json src
+          pnpm exec typedoc --json typedoc_out/docs.json src
 
       - name: Configure npm for publishing
         run: |
@@ -109,9 +118,9 @@ jobs:
       - name: Publish to npmjs.org
         run: |
           if [ "${GITHUB_REF##*/}" = "beta" ]; then
-            npm publish --tag beta --access public
+            pnpm publish --tag beta --access public --no-git-checks
           else
-            npm publish --tag latest --access public
+            pnpm publish --tag latest --access public --no-git-checks
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
@@ -122,7 +131,7 @@ jobs:
 
       - name: Publish to GitHub Packages
         if: false # disabled until scoped package is ready
-        run: npm publish --registry=https://npm.pkg.github.com/ --access public
+        run: pnpm publish --registry=https://npm.pkg.github.com/ --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN }}
 

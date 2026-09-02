@@ -3,7 +3,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"version": "1.0.12",
+	"version": "1.1.0",
 	"type": "module",
 	"description": "A cli log tool for xernerx projects",
 	"main": "./dist/main.cjs",
@@ -25,25 +25,25 @@
 		}
 	},
 	"scripts": {
-		"beta": "npm version prerelease --preid=beta",
-		"patch": "npm version patch",
-		"minor": "npm version minor",
-		"major": "npm version major",
+		"commit": "npx prettier --write . && changeset",
+		"ship": "pnpm run build && changeset version && git add . && git commit -m \"chore: release\" && changeset tag && git push --follow-tags",
 		"docs": "npx typedoc",
-		"build": "npm i && npx tsup && npx @arethetypeswrong/cli --pack && npm run docs",
-		"dev": "npm i && npm link && npx tsup --watch",
-		"test": "npm install --engine-strict=true",
-		"pub": "git add . && git commit -m \"type update\" && npm run patch && git push origin main"
+		"build": "pnpm i && npx tsup && npx @arethetypeswrong/cli --pack && pnpm run docs",
+		"dev": "concurrently \"tsup --watch\" \"node --watch test/main.mjs\"",
+		"test": "pnpm install --engine-strict=true"
 	},
 	"keywords": [],
 	"author": "Xernerx Studios",
 	"license": "MIT",
-	"packageManager": "npm@11.11.0",
+	"packageManager": "pnpm@11.24.0",
 	"devDependencies": {
 		"@arethetypeswrong/cli": "^0.18.2",
+		"@changesets/cli": "^3.0.1",
 		"@types/chalk-animation": "^1.6.3",
 		"@types/node": "^24",
+		"concurrently": "^10.0.5",
 		"prettier": "^3.8.3",
+		"tsc-watch": "^7.2.1",
 		"tsup": "^8.5.1",
 		"typedoc-github-theme": "^0.4.0",
 		"typedoc-plugin-extras": "^4.0.1",
@@ -52,8 +52,7 @@
 	},
 	"dependencies": {
 		"boxen": "^8.0.1",
-		"chalk": "^5.6.2",
-		"ora": "^9.4.0"
+		"chalk": "^5.6.2"
 	},
 	"engines": {
 		"node": ">=24"

@@ -1,6 +1,6 @@
 /** @format */
 
-import { terminal } from '../dist/main.mjs';
+import { terminal } from '../dist/main.js';
 import './file.mjs';
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

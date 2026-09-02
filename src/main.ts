@@ -1,9 +1,9 @@
 /** @format */
 
-import ora, { Ora, Options as OraOptions } from 'ora';
 import chalk from 'chalk';
 import boxen, { Options } from 'boxen';
 import util from 'util';
+import { Spinner } from './spinner.js';
 
 type Format = 'title' | 'date' | 'time' | 'datetime' | 'relative' | 'duration' | 'level' | 'env' | 'pid' | 'memory' | 'uptime' | 'scope' | 'tag' | 'icon';
 
@@ -16,8 +16,8 @@ interface TerminalOptions {
 	icon?: string;
 	requestId?: string;
 
-	_spinnerInstance?: Ora;
-	spinner?: OraOptions['spinner'];
+	_spinnerInstance?: Spinner;
+	spinner?: string | string[];
 	spinnerText?: string;
 	spin?: boolean;
 }
@@ -34,7 +34,7 @@ export class Terminal {
 
 	public readonly prefix: () => string;
 
-	private spinner: Ora;
+	private spinner: Spinner;
 	private spinEnabled: boolean;
 
 	private prefixFormat = {
@@ -97,10 +97,10 @@ export class Terminal {
 
 		this.spinner =
 			options._spinnerInstance ??
-			ora({
+			new Spinner({
 				text: options.spinnerText || '',
-				spinner: options.spinner || 'dots',
 				isEnabled: this.spinEnabled,
+				frames: Array.isArray(options.spinner) ? options.spinner : undefined,
 			});
 
 		if (this.spinEnabled && !options._spinnerInstance) {

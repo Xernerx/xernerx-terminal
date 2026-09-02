@@ -1,6 +1,6 @@
 /** @format */
 
-import { terminal } from '../dist/main.mjs';
+import { terminal } from '../dist/main.js';
 
 terminal.clear();
 
