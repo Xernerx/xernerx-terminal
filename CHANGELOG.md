@@ -1,5 +1,13 @@
 <!-- @format -->
 
+## 1.1.6
+
+### Patch Changes
+
+- <!-- @format -->
+
+  Yes
+
 ## 1.1.5
 
 ### Patch Changes

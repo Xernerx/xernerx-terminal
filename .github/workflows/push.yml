@@ -65,6 +65,11 @@ jobs:
           # JSON (for your API)
           pnpm exec typedoc --json typedoc_out/docs.json src
 
+      - name: Configure npm authentication
+        run: echo "//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}" > .npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+
       - name: Publish to npmjs.org
         run: |
           if [ "${GITHUB_REF##*/}" = "beta" ]; then
