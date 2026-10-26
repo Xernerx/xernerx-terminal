@@ -1,5 +1,11 @@
 <!-- @format -->
 
+## 1.1.14
+
+### Patch Changes
+
+- Standardize child logger test scope to 2-letter initials (`XT`) and add `tslib` to `devDependencies`.
+
 ## 1.1.13
 
 ### Patch Changes
