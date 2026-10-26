@@ -3,41 +3,77 @@
 import chalk from 'chalk';
 import boxen, { Options } from 'boxen';
 import util from 'util';
-import { Spinner } from './spinner.js';
+import { Spinner, SpinnerOptions } from './spinner.js';
 
-type Format = 'title' | 'date' | 'time' | 'datetime' | 'relative' | 'duration' | 'level' | 'env' | 'pid' | 'memory' | 'uptime' | 'scope' | 'tag' | 'icon';
+export { Spinner, type SpinnerOptions };
 
-interface TerminalOptions {
+/**
+ * Available metadata tokens that can be included in a {@link Terminal} log prefix.
+ */
+export type Format = 'title' | 'date' | 'time' | 'datetime' | 'relative' | 'duration' | 'level' | 'env' | 'pid' | 'memory' | 'uptime' | 'scope' | 'tag' | 'icon' | 'requestId';
+
+/**
+ * Supported severity levels for {@link Terminal} output.
+ */
+export type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+
+/**
+ * Configuration options for initializing a {@link Terminal} logger instance.
+ */
+export interface TerminalOptions {
+	/** Ordered list of prefix segments to render before each log message. */
 	format?: Array<Format>;
+	/** Primary application or brand title shown in the prefix and banner box. */
 	title?: string;
-	level?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+	/** Minimum or active log level (`DEBUG` enables `.debug()` output). */
+	level?: LogLevel;
+	/** Module or service scope label (e.g., `'WS'`, `'DB'`, `'AUTH'`). */
 	scope?: string;
+	/** Secondary bold tag label for categorizing logs. */
 	tag?: string;
+	/** Optional icon or emoji rendered in the prefix. */
 	icon?: string;
+	/** Optional request or correlation ID rendered when `'requestId'` is in `format`. */
 	requestId?: string;
 
+	/** Internal shared spinner instance passed to child loggers. */
 	_spinnerInstance?: Spinner;
+	/** Custom spinner frame characters. */
 	spinner?: string | string[];
+	/** Idle text shown next to the active spinner. */
 	spinnerText?: string;
+	/** Whether the interactive CLI spinner is enabled (defaults to `true`). */
 	spin?: boolean;
 }
 
+/**
+ * Formatted CLI logger and interactive terminal controller for Xernerx projects.
+ */
 export class Terminal {
+	/** Timestamp when this terminal instance was created. */
 	public readonly now: Date;
+	/** Active prefix format segments. */
 	public readonly format: Array<Format>;
+	/** Title displayed in the prefix and default `.box()` header. */
 	public readonly title: string;
-	public readonly level: TerminalOptions['level'];
+	/** Active log level for this instance. */
+	public readonly level: LogLevel;
+	/** Optional module or service scope name. */
 	public readonly scope?: string;
+	/** Optional secondary tag label. */
 	public readonly tag?: string;
+	/** Optional prefix icon. */
 	public readonly icon?: string;
+	/** Optional request correlation identifier. */
 	public readonly requestId?: string;
 
+	/** Generates the formatted, pipe-delimited prefix string for the current moment. */
 	public readonly prefix: () => string;
 
 	private spinner: Spinner;
 	private spinEnabled: boolean;
 
-	private prefixFormat = {
+	private prefixFormat: Record<Format, () => string> = {
 		title: () => chalk.magenta.bold(this.title),
 
 		date: () => chalk.dim(new Date().toLocaleDateString()),
@@ -69,13 +105,19 @@ export class Terminal {
 
 		uptime: () => chalk.gray(`${Math.floor(process.uptime())}s`),
 
-		scope: () => chalk.cyan(this.scope || ''),
+		scope: () => (this.scope ? chalk.cyan(this.scope) : ''),
 
 		tag: () => (this.tag ? chalk.white.bold(this.tag) : ''),
 
 		icon: () => this.icon || '',
+
+		requestId: () => (this.requestId ? chalk.gray(`[${this.requestId}]`) : ''),
 	};
 
+	/**
+	 * Creates a new {@link Terminal} logger instance.
+	 * @param options - Configuration options for formatting, scope, and spinner behavior.
+	 */
 	constructor(options: TerminalOptions = {}) {
 		this.now = new Date();
 		this.title = options.title || 'XERNERX';
@@ -89,7 +131,7 @@ export class Terminal {
 
 		this.prefix = () =>
 			this.format
-				.map((format) => this.prefixFormat[format]())
+				.map((format) => this.prefixFormat[format]?.() ?? '')
 				.filter(Boolean)
 				.join(' | ');
 
@@ -106,14 +148,30 @@ export class Terminal {
 		if (this.spinEnabled && !options._spinnerInstance) {
 			this.spinner.start();
 		}
+
+		// Bind methods so they can be passed directly as callbacks (e.g., `.catch(terminal.error)`)
+		this.child = this.child.bind(this);
+		this.clear = this.clear.bind(this);
+		this.box = this.box.bind(this);
+		this.log = this.log.bind(this);
+		this.info = this.info.bind(this);
+		this.warn = this.warn.bind(this);
+		this.error = this.error.bind(this);
+		this.debug = this.debug.bind(this);
+		this.table = this.table.bind(this);
+		this.time = this.time.bind(this);
+		this.timeEnd = this.timeEnd.bind(this);
+		this.start = this.start.bind(this);
+		this.stop = this.stop.bind(this);
+		this.succeed = this.succeed.bind(this);
+		this.fail = this.fail.bind(this);
 	}
 
 	/* ================= INTERNAL ================= */
 
 	private parseError(err: Error) {
 		const stack = err.stack?.split('\n') || [];
-
-		const line = stack[1]?.trim() || '';
+		const line = stack.find((l) => l.trim().startsWith('at '))?.trim() || stack[1]?.trim() || '';
 
 		// Handles both:
 		// at file:///path:line:col
@@ -173,6 +231,10 @@ export class Terminal {
 
 	/* ================= LOG METHODS ================= */
 
+	/**
+	 * Creates a child {@link Terminal} logger inheriting this instance's configuration and shared spinner.
+	 * @param options - Overrides for scope, tag, icon, format, or level.
+	 */
 	public child(options: Partial<TerminalOptions>) {
 		return new Terminal({
 			title: this.title,
@@ -184,18 +246,32 @@ export class Terminal {
 			requestId: options.requestId ?? this.requestId,
 			spin: this.spinEnabled,
 
-			// THIS is the important part
+			// Share the parent's spinner instance across child loggers
 			_spinnerInstance: this.spinner,
 
 			...options,
 		});
 	}
 
+	/**
+	 * Clears the terminal screen.
+	 */
 	public clear() {
+		const wasSpinning = this.spinEnabled && this.spinner.isSpinning;
+		if (wasSpinning) this.spinner.stop();
 		console.clear();
+		if (wasSpinning) this.spinner.start();
 	}
 
-	public box(text: string, options?: Options) {
+	/**
+	 * Renders a styled magenta box banner in the terminal.
+	 * @param text - Banner text (defaults to `this.title`).
+	 * @param options - Additional `boxen` styling options.
+	 */
+	public box(text?: string, options?: Options) {
+		const wasSpinning = this.spinEnabled && this.spinner.isSpinning;
+		if (wasSpinning) this.spinner.stop();
+
 		console.info(
 			boxen(chalk.magenta.bold(text || this.title), {
 				borderStyle: 'round',
@@ -207,20 +283,38 @@ export class Terminal {
 				...options,
 			})
 		);
+
+		if (wasSpinning) this.spinner.start();
 	}
 
+	/**
+	 * Logs an informational message with the configured prefix.
+	 * @param args - Values or messages to format and print.
+	 */
 	public log<T>(...args: T[]): void {
 		this.writeLine('info', this.formatMessage(args));
 	}
 
+	/**
+	 * Alias for {@link Terminal.log} — logs an informational message.
+	 * @param args - Values or messages to format and print.
+	 */
 	public info<T>(...args: T[]): void {
 		this.writeLine('info', this.formatMessage(args));
 	}
 
+	/**
+	 * Logs a warning message with a yellow warning indicator.
+	 * @param args - Values or messages to format and print.
+	 */
 	public warn<T>(...args: T[]): void {
 		this.writeLine('warn', this.formatMessage(args));
 	}
 
+	/**
+	 * Logs an error message or `Error` instance (extracting file, line, and column from the stack trace).
+	 * @param args - Error objects or messages to format and print.
+	 */
 	public error(...args: any[]): void {
 		const formatted = args.map((arg) => {
 			if (typeof arg === 'string') return arg;
@@ -229,34 +323,48 @@ export class Terminal {
 				return util.inspect(arg, { colors: true, depth: 2 });
 			}
 
-			if (arg instanceof Error) {
-				const parsed = this.parseError(arg);
-
-				return chalk.red.bold(`${parsed.message} (${parsed.filepath}:${parsed.line}:${parsed.column})`);
-			}
-
-			return String(arg);
+			const parsed = this.parseError(arg);
+			return chalk.red.bold(`${parsed.message} (${parsed.filepath}:${parsed.line}:${parsed.column})`);
 		});
 
 		this.writeLine('fail', `${this.prefix()} | ${formatted.join(' ')}`);
 	}
 
+	/**
+	 * Logs a debug message when `this.level === 'DEBUG'`.
+	 * @param args - Values or messages to format and print.
+	 */
 	public debug<T>(...args: T[]): void {
 		if (this.level === 'DEBUG') {
 			this.writeLine('info', this.formatMessage(args));
 		}
 	}
 
+	/**
+	 * Prints tabular data using `console.table`.
+	 * @param data - Array or object of tabular data to display.
+	 */
 	public table(data: any[]) {
+		const wasSpinning = this.spinEnabled && this.spinner.isSpinning;
+		if (wasSpinning) this.spinner.stop();
 		console.table(data);
+		if (wasSpinning) this.spinner.start();
 	}
 
 	private timers = new Map<string, number>();
 
+	/**
+	 * Starts a named timer for measuring execution duration.
+	 * @param label - Unique label identifying the timer.
+	 */
 	public time(label: string) {
 		this.timers.set(label, Date.now());
 	}
 
+	/**
+	 * Ends a previously started timer and logs the elapsed duration in milliseconds.
+	 * @param label - Label passed to {@link Terminal.time}.
+	 */
 	public timeEnd(label: string) {
 		const start = this.timers.get(label);
 		if (!start) return;
@@ -268,25 +376,43 @@ export class Terminal {
 
 	/* ================= OPTIONAL CONTROL ================= */
 
+	/**
+	 * Starts or updates the active spinner text with the current prefix.
+	 * @param text - Optional status text to display next to the spinner.
+	 */
 	public start(text?: string): void {
 		if (!this.spinEnabled) return;
-		this.spinner.start(`${this.prefix()} | ${text || ''}`);
+		this.spinner.start(text ? `${this.prefix()} | ${text}` : '');
 	}
 
+	/**
+	 * Stops and clears the active spinner.
+	 */
 	public stop(): void {
 		if (!this.spinEnabled) return;
 		this.spinner.stop();
 	}
 
+	/**
+	 * Persists a green success (`✔`) line and stops the spinner.
+	 * @param text - Optional completion message.
+	 */
 	public succeed(text?: string): void {
 		if (!this.spinEnabled) return;
 		this.spinner.succeed(`${this.prefix()} | ${text || ''}`);
 	}
 
+	/**
+	 * Persists a red failure (`✖`) line and stops the spinner.
+	 * @param text - Optional failure message.
+	 */
 	public fail(text?: string): void {
 		if (!this.spinEnabled) return;
 		this.spinner.fail(`${this.prefix()} | ${text || ''}`);
 	}
 }
 
+/**
+ * Default singleton {@link Terminal} instance.
+ */
 export const terminal = new Terminal();

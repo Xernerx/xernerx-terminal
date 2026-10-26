@@ -1,99 +1,81 @@
 <!-- @format -->
 
+## 1.1.12
+
+### Patch Changes
+
+- Fix spinner persistence text and process exit cleanup, export `TerminalOptions`, `Format`, `LogLevel`, `Spinner`, and `SpinnerOptions` with full TypeDoc documentation, bind `Terminal` methods for callback usage, add `requestId` prefix formatting, and harden the Changeset + GitHub Actions release pipeline.
+
+# @xernerx/terminal
+
 ## 1.1.11
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  this the one
+- this the one
 
 ## 1.1.10
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  frick
+- frick
 
 ## 1.1.9
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  \nope...
+- nope...
 
 ## 1.1.8
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  maybe?
+- maybe?
 
 ## 1.1.7
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  sigh
+- sigh
 
 ## 1.1.6
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  Yes
+- Yes
 
 ## 1.1.5
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  Fixing release once more
+- Fixing release once more
 
 ## 1.1.4
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  Fixing release again
+- Fixing release again
 
 ## 1.1.3
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  Fixing release
+- Fixing release
 
 ## 1.1.2
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  Fixed release
+- Fixed release
 
 ## 1.1.1
 
 ### Patch Changes
 
-- <!-- @format -->
-
-  Patch
-
-# @xernerx/terminal
+- Patch
 
 ## 1.1.0
 
 ### Minor Changes
 
-- <!-- @format -->
-
-  Updated to not rely on ora
+- Updated to not rely on ora

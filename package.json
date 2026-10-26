@@ -3,7 +3,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"version": "1.1.11",
+	"version": "1.1.12",
 	"type": "module",
 	"description": "A cli log tool for xernerx projects",
 	"main": "./dist/main.cjs",
@@ -25,8 +25,8 @@
 		}
 	},
 	"scripts": {
-		"commit": "prettier --write . && changeset",
-		"ship": "pnpm run build && changeset version && git add . && git commit -m \"chore: release\" && changeset tag && git push --follow-tags",
+		"commit": "prettier --write . && node -e \"const fs=require('fs'),cp=require('child_process');const has=fs.readdirSync('.changeset').some(f=>f.endsWith('.md')&&f.toLowerCase()!=='readme.md');cp.execSync(!process.stdin.isTTY&&has?'pnpm exec changeset status':'pnpm exec changeset',{stdio:'inherit'})\"",
+		"ship": "changeset version && pnpm run build && git add . && git commit -m \"chore: release\" && changeset tag && git push --follow-tags",
 		"docs": "typedoc",
 		"build": "pnpm i && tsup && attw --pack && pnpm run docs",
 		"dev": "concurrently \"tsup --watch\" \"node --watch test/main.mjs\"",
