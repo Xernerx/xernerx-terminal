@@ -1,5 +1,11 @@
 <!-- @format -->
 
+## 1.1.13
+
+### Patch Changes
+
+- Fixed type errors
+
 ## 1.1.12
 
 ### Patch Changes
