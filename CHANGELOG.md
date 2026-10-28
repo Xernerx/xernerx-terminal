@@ -1,5 +1,11 @@
 <!-- @format -->
 
+## 1.1.15
+
+### Patch Changes
+
+- Update `README.md` documentation and JSDoc examples.
+
 ## 1.1.14
 
 ### Patch Changes
