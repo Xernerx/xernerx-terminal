@@ -1,5 +1,11 @@
 <!-- @format -->
 
+## 1.2.0
+
+### Minor Changes
+
+- Add `terminal.update()` to batch and check all installed `@xernerx/*` and `xernerx` packages against the npm registry, outputting a single unified, readable list with direct links to `docs.xernerx.com` and `info.xernerx.com/changelog`.
+
 ## 1.1.15
 
 ### Patch Changes

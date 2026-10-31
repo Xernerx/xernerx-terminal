@@ -2,10 +2,25 @@
 
 import chalk from 'chalk';
 import boxen, { Options } from 'boxen';
+import fs from 'node:fs';
+import path from 'node:path';
 import util from 'util';
 import { Spinner, SpinnerOptions } from './spinner.js';
 
 export { Spinner, type SpinnerOptions };
+
+/**
+ * Package descriptor accepted by {@link Terminal.update}.
+ */
+export interface UpdatePackageInput {
+	/** NPM package name (e.g., `'@xernerx/framework'` or `'xernerx'`). */
+	name?: string;
+	/** Currently installed version of the package (e.g., `'1.1.1'`). */
+	version?: string;
+}
+
+const registeredUpdatePackages = new Map<string, string | undefined>();
+let activeUpdateCheck: Promise<void> | null = null;
 
 /**
  * Available metadata tokens that can be included in a {@link Terminal} log prefix.
@@ -165,6 +180,7 @@ export class Terminal {
 		this.stop = this.stop.bind(this);
 		this.succeed = this.succeed.bind(this);
 		this.fail = this.fail.bind(this);
+		this.update = this.update.bind(this);
 	}
 
 	/* ================= INTERNAL ================= */
@@ -409,6 +425,187 @@ export class Terminal {
 	public fail(text?: string): void {
 		if (!this.spinEnabled) return;
 		this.spinner.fail(`${this.prefix()} | ${text || ''}`);
+	}
+
+	/**
+	 * Checks all installed `@xernerx/*` and `xernerx` packages in the current project against the npm registry
+	 * and logs a single unified, readable list of available updates with direct documentation and changelog links.
+	 *
+	 * Multiple calls across different packages during startup are automatically batched into a single check
+	 * so the terminal is never spammed with duplicate update notices.
+	 *
+	 * @param pkg - Optional package descriptor (`{ name, version }`) or package name/registry URL to include in the check.
+	 */
+	public async update(pkg?: UpdatePackageInput | string): Promise<void> {
+		if (typeof pkg === 'string' && pkg.trim()) {
+			const cleanName = pkg
+				.trim()
+				.replace(/^https?:\/\/registry\.npmjs\.org\//, '')
+				.replace(/\/+$/, '');
+			if (cleanName === 'xernerx' || cleanName.startsWith('@xernerx/')) {
+				if (!registeredUpdatePackages.has(cleanName)) {
+					registeredUpdatePackages.set(cleanName, undefined);
+				}
+			}
+		} else if (pkg && typeof pkg === 'object' && pkg.name) {
+			if (pkg.name === 'xernerx' || pkg.name.startsWith('@xernerx/')) {
+				registeredUpdatePackages.set(pkg.name, pkg.version);
+			}
+		}
+
+		if (activeUpdateCheck) {
+			return activeUpdateCheck;
+		}
+
+		activeUpdateCheck = (async () => {
+			// Wait briefly so any concurrent startup calls from other @xernerx/* packages register into the same batch
+			await new Promise((resolve) => setTimeout(resolve, 50));
+
+			try {
+				const cwd = process.cwd();
+				const projectPkgPath = path.resolve(cwd, 'package.json');
+				const declaredRanges = new Map<string, string>();
+
+				if (fs.existsSync(projectPkgPath)) {
+					try {
+						const projectPkg = JSON.parse(fs.readFileSync(projectPkgPath, 'utf8'));
+						const allDeps: Record<string, string> = {
+							...(projectPkg.dependencies || {}),
+							...(projectPkg.devDependencies || {}),
+						};
+
+						for (const [depName, range] of Object.entries(allDeps)) {
+							if ((depName === 'xernerx' || depName.startsWith('@xernerx/')) && typeof range === 'string') {
+								declaredRanges.set(depName, range);
+								if (!registeredUpdatePackages.has(depName)) {
+									registeredUpdatePackages.set(depName, undefined);
+								}
+							}
+						}
+
+						if (typeof projectPkg.name === 'string' && (projectPkg.name === 'xernerx' || projectPkg.name.startsWith('@xernerx/')) && typeof projectPkg.version === 'string') {
+							registeredUpdatePackages.set(projectPkg.name, projectPkg.version);
+						}
+					} catch {
+						// Ignore malformed project package.json
+					}
+				}
+
+				const packagesToCheck = Array.from(registeredUpdatePackages.keys()).sort((a, b) => a.localeCompare(b));
+				if (packagesToCheck.length === 0) return;
+
+				const resolveInstalledVersion = (pkgName: string): string | undefined => {
+					const nodeModulesPkgPath = path.resolve(cwd, 'node_modules', ...pkgName.split('/'), 'package.json');
+					if (fs.existsSync(nodeModulesPkgPath)) {
+						try {
+							const installed = JSON.parse(fs.readFileSync(nodeModulesPkgPath, 'utf8'));
+							if (typeof installed.version === 'string' && installed.version.trim()) {
+								return installed.version.trim();
+							}
+						} catch {
+							// Fallback below
+						}
+					}
+
+					const registeredVersion = registeredUpdatePackages.get(pkgName);
+					if (registeredVersion) return registeredVersion;
+
+					const declared = declaredRanges.get(pkgName);
+					if (declared && !declared.startsWith('workspace:') && !declared.startsWith('link:') && !declared.startsWith('file:')) {
+						return declared.replace(/^[\^~>=<\s]+/, '');
+					}
+
+					return undefined;
+				};
+
+				interface OutdatedEntry {
+					name: string;
+					current: string;
+					latest: string;
+					type: 'major' | 'minor' | 'patch' | 'beta';
+				}
+
+				const results = await Promise.all(
+					packagesToCheck.map(async (pkgName): Promise<OutdatedEntry | null> => {
+						const current = resolveInstalledVersion(pkgName);
+						if (!current) return null;
+
+						const registryData = (await fetch(`https://registry.npmjs.org/${pkgName}`)
+							.then((res) => (res.ok ? res.json() : null))
+							.catch(() => null)) as { 'dist-tags'?: { latest?: string; beta?: string } } | null;
+
+						const distTags = registryData?.['dist-tags'];
+						if (!distTags) return null;
+
+						const range = declaredRanges.get(pkgName) || '';
+						const wantsBeta = range.includes('beta') || current.includes('beta');
+
+						if (wantsBeta) {
+							const latestBeta = distTags.beta;
+							if (latestBeta && latestBeta !== current) {
+								return { name: pkgName, current, latest: latestBeta, type: 'beta' };
+							}
+							return null;
+						}
+
+						const latest = distTags.latest;
+						if (!latest || latest === current) return null;
+
+						const [latestMajor = 0, latestMinor = 0, latestPatch = 0] = latest
+							.split('-')[0]
+							.split('.')
+							.map((n) => Number.parseInt(n, 10));
+						const [currMajor = 0, currMinor = 0, currPatch = 0] = current
+							.split('-')[0]
+							.split('.')
+							.map((n) => Number.parseInt(n, 10));
+
+						if (latestMajor > currMajor) {
+							return { name: pkgName, current, latest, type: 'major' };
+						}
+						if (latestMajor === currMajor && latestMinor > currMinor) {
+							return { name: pkgName, current, latest, type: 'minor' };
+						}
+						if (latestMajor === currMajor && latestMinor === currMinor && latestPatch > currPatch) {
+							return { name: pkgName, current, latest, type: 'patch' };
+						}
+
+						return null;
+					})
+				);
+
+				const outdated = results.filter((entry): entry is OutdatedEntry => entry !== null);
+				if (outdated.length === 0) return;
+
+				const maxNameLen = Math.max(...outdated.map((o) => o.name.length));
+				const header =
+					outdated.length === 1 ? `Update available for ${chalk.magenta.bold(outdated[0].name)}:` : `Updates available for ${chalk.magenta.bold(String(outdated.length))} Xernerx packages:`;
+
+				const lines = [header];
+
+				for (const item of outdated) {
+					const paddedName = item.name.padEnd(maxNameLen, ' ');
+					const badge =
+						item.type === 'major' ? chalk.red.bold('major') : item.type === 'minor' ? chalk.yellow.bold('minor') : item.type === 'beta' ? chalk.magenta.bold('beta') : chalk.green.bold('patch');
+					const docsUrl = `https://docs.xernerx.com/packages/${item.name}`;
+					const changelogUrl = `https://info.xernerx.com/changelog#${item.name}`;
+
+					lines.push(
+						`  • ${chalk.cyan.bold(paddedName)}  ${chalk.dim(item.current)} → ${chalk.green.bold(item.latest)} (${badge})`,
+						`    ${chalk.dim('Docs:')} ${chalk.underline(docsUrl)} ${chalk.dim('|')} ${chalk.dim('Changelog:')} ${chalk.underline(changelogUrl)}`
+					);
+				}
+
+				const installTargets = outdated.map((o) => `${o.name}@${o.latest}`).join(' ');
+				lines.push(`Run ${chalk.cyan.bold(`'npm install ${installTargets}'`)} to update.`);
+
+				this.info(lines.join('\n'));
+			} catch {
+				// Never crash the host application if offline or npm registry is unreachable
+			}
+		})();
+
+		return activeUpdateCheck;
 	}
 }
 
