@@ -3,7 +3,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"type": "module",
 	"description": "A cli log tool for xernerx projects",
 	"main": "./dist/main.cjs",
@@ -35,7 +35,7 @@
 	"keywords": [],
 	"author": "Xernerx Studios",
 	"license": "Apache-2.0",
-	"packageManager": "pnpm@11.24.0",
+	"packageManager": "pnpm@12.21.0",
 	"devDependencies": {
 		"@arethetypeswrong/cli": "^0.18.2",
 		"@changesets/cli": "^3.0.1",
