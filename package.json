@@ -3,7 +3,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"version": "1.2.3",
+	"version": "1.2.4",
 	"type": "module",
 	"description": "A cli log tool for xernerx projects",
 	"main": "./dist/main.cjs",
@@ -61,6 +61,6 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/Xernerx/terminal.git"
+		"url": "git+https://github.com/Xernerx/xernerx-terminal.git"
 	}
 }

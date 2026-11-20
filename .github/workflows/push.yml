@@ -90,29 +90,22 @@ jobs:
           NPMRC_FILE="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
           printf "@xernerx:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=%s\n" "${NODE_AUTH_TOKEN}" > "${NPMRC_FILE}"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Packages
         run: |
           PKG_NAME=$(node -p "require('./package.json').name")
           PKG_VERSION=$(node -p "require('./package.json').version")
           GH_PKG_NAME="@xernerx/${PKG_NAME#@xernerx/}"
-          GH_PUBLISHED=$(npm view "${GH_PKG_NAME}@${PKG_VERSION}" version --registry=https://npm.pkg.github.com/ 2>/dev/null || echo "")
-          if [ "$GH_PUBLISHED" != "$PKG_VERSION" ]; then
-            if [ "$PKG_NAME" != "$GH_PKG_NAME" ]; then
-              node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json','utf8'));p.name='${GH_PKG_NAME}';fs.writeFileSync('package.json',JSON.stringify(p,null,'\t')+'\n');"
-            fi
-            if [ "${GITHUB_REF##*/}" = "beta" ]; then
-              npm publish --registry=https://npm.pkg.github.com/ --tag beta --access public
-            else
-              npm publish --registry=https://npm.pkg.github.com/ --tag latest --access public
-            fi
-            git checkout -- package.json
+          node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json','utf8'));p.name='${GH_PKG_NAME}';p.repository={type:'git',url:'git+https://github.com/${GITHUB_REPOSITORY}.git'};p.publishConfig={registry:'https://npm.pkg.github.com/',access:'public'};fs.writeFileSync('package.json',JSON.stringify(p,null,'\t')+'\n');"
+          if [ "${GITHUB_REF##*/}" = "beta" ]; then
+            npm publish --registry=https://npm.pkg.github.com/ --tag beta --access public || echo "GitHub Packages publish skipped or already exists"
           else
-            echo "Version ${PKG_VERSION} is already published on GitHub Packages. Skipping."
+            npm publish --registry=https://npm.pkg.github.com/ --tag latest --access public || echo "GitHub Packages publish skipped or already exists"
           fi
+          git checkout -- package.json
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         id: gh-release
