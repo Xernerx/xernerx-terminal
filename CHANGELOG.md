@@ -1,5 +1,11 @@
 <!-- @format -->
 
+## 1.2.3
+
+### Patch Changes
+
+- Enable automated GitHub Packages (`npm.pkg.github.com`) publishing in CI and add `repository` metadata to `package.json`.
+
 ## 1.2.2
 
 ### Patch Changes

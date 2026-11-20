@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   build-and-publish:
@@ -85,17 +86,33 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
 
       - name: Configure npm for GitHub Packages
-        if: false # disabled until scoped package is ready
         run: |
-          printf "@xernerx:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=%s\n" "${NODE_AUTH_TOKEN}" > ~/.npmrc
+          NPMRC_FILE="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          printf "@xernerx:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=%s\n" "${NODE_AUTH_TOKEN}" > "${NPMRC_FILE}"
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Packages
-        if: false # disabled until scoped package is ready
-        run: npm publish --registry=https://npm.pkg.github.com/ --access public
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          GH_PKG_NAME="@xernerx/${PKG_NAME#@xernerx/}"
+          GH_PUBLISHED=$(npm view "${GH_PKG_NAME}@${PKG_VERSION}" version --registry=https://npm.pkg.github.com/ 2>/dev/null || echo "")
+          if [ "$GH_PUBLISHED" != "$PKG_VERSION" ]; then
+            if [ "$PKG_NAME" != "$GH_PKG_NAME" ]; then
+              node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json','utf8'));p.name='${GH_PKG_NAME}';fs.writeFileSync('package.json',JSON.stringify(p,null,'\t')+'\n');"
+            fi
+            if [ "${GITHUB_REF##*/}" = "beta" ]; then
+              npm publish --registry=https://npm.pkg.github.com/ --tag beta --access public
+            else
+              npm publish --registry=https://npm.pkg.github.com/ --tag latest --access public
+            fi
+            git checkout -- package.json
+          else
+            echo "Version ${PKG_VERSION} is already published on GitHub Packages. Skipping."
+          fi
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         id: gh-release
